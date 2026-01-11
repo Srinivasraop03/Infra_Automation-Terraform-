@@ -1,0 +1,56 @@
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy (dev, stage, prod)'
+        required: true
+        type: choice
+        options:
+        - dev
+        - stage
+        - prod
+      confirmation:
+        description: 'Type "DESTROY" to confirm'
+        required: true
+        default: 'NO'
+
+jobs:
+  terraform:
+    name: "Terraform Destroy"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infrastructure-live
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Check Confirmation
+        if: ${{ inputs.confirmation != 'DESTROY' }}
+        run: |
+          echo "Confirmation input '${{ inputs.confirmation }}' did not match 'DESTROY'. Aborting."
+          exit 1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Select Workspace
+        run: terraform workspace select ${{ inputs.environment }}
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -var-file="${{ inputs.environment }}.tfvars"
