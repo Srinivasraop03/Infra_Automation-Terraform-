@@ -7,19 +7,13 @@
 
 # Crash log files
 crash.log
-crash.log.*
+crash.*.log
 
 # Exclude all .tfvars files, which are likely to contain sensitive data, such as
-# password, private keys, and other secrets. These should not be part of version 
-# control as they are data points which are potentially sensitive and subject 
+# password, private keys, and other secrets. These should not be part of version
+# control as they are data points which are potentially sensitive and subject
 # to change depending on the environment.
-#
-# *.tfvars
-# *.tfvars.json
-#
-# HOWEVER, since the user explicitly has dev.tfvars and prod.tfvars with non-sensitive config
-# we will NOT ignore them by default in this specific run, unless requested.
-# I will leave them commented out above for educational purposes.
+*.tfvars
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
@@ -28,9 +22,23 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Include override files you do want to check in by negating the pattern
-# !example_override.tf
+# Ignore temporary backup directories created by scripts
+s3-backup*
 
-# Ignore CLI configuration files
-.terraformrc
-terraform.rc
+# Editor/IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# AWS CLI
+.aws/

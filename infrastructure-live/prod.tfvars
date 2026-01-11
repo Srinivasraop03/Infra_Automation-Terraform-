@@ -7,4 +7,4 @@ instance_count    = 2
 instance_type     = "t3.medium"
 allowed_ssh_cidrs = ["10.0.0.0/8"] # Restricted for Prod
 
-bucket_name       = "my-app-unique-bucket-name"
+bucket_name = "my-app-unique-bucket-name"

@@ -1,3 +1,13 @@
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 4.0.0"
+    }
+  }
+}
+
 provider "aws" {
   region = "us-east-1"
 }
@@ -7,7 +17,7 @@ provider "aws" {
 module "tf_state_bucket" {
   source = "../../terraform-modules/modules/aws/s3"
 
-  bucket_name        = "infrastructure-automation-state-store-srini-01" # Unique global name
+  bucket_name        = "terraform-infra-state-bucket-srini" # Updated for uniqueness
   environment        = "global"
   versioning_enabled = true
 }
@@ -30,7 +40,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
 }
 
 output "s3_bucket_name" {
-  value = module.tf_state_bucket.bucket_arn # Changed to invoke output that exists in module
+  value = module.tf_state_bucket.bucket_id
 }
 
 output "dynamodb_table_name" {

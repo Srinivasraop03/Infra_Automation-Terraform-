@@ -7,4 +7,4 @@ instance_count    = 1
 instance_type     = "t3.micro"
 allowed_ssh_cidrs = ["0.0.0.0/0"] # Open for dev testing
 
-bucket_name       = "my-app-unique-bucket-name"
+bucket_name = "my-app-unique-bucket-name-dev"
