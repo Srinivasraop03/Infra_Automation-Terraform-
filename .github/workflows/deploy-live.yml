@@ -3,6 +3,7 @@ name: Deploy Live Infrastructure
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       environment:
@@ -17,16 +18,22 @@ on:
 
 jobs:
   terraform:
-    name: "Terraform Apply"
+    name: "Deploy: ${{ github.ref_name }}"
+    # Enterprise Feature: Maps to GitHub Environments (e.g. 'prod' can have explicit approval rules)
+    environment:
+      name: ${{ (github.ref_type == 'tag') && 'prod' || (inputs.environment || 'dev') }}
+
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./infrastructure-live
 
     env:
-      # Determine environment: usage of inputs context is only valid for workflow_dispatch
-      # We default to 'dev' for push events
-      TF_ENV: ${{ inputs.environment || 'dev' }}
+      # Logic:
+      # 1. Manual trigger? Use input.
+      # 2. Tag (v1.0)? Use 'prod'.
+      # 3. Default/Branch detected? Use 'dev'.
+      TF_ENV: ${{ inputs.environment || (startsWith(github.ref, 'refs/tags/') && 'prod') || 'dev' }}
 
     steps:
       - name: Checkout Code
