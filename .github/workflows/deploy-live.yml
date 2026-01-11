@@ -1,17 +1,19 @@
-name: Provision Infrastructure
+name: Deploy Live Infrastructure
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy (dev, stage, prod)'
+        description: "Environment to deploy (dev, stage, prod)"
         required: true
-        default: 'dev'
+        default: "dev"
         type: choice
         options:
-        - dev
-        - stage
-        - prod
+          - dev
+          - stage
+          - prod
 
 jobs:
   terraform:
@@ -20,6 +22,11 @@ jobs:
     defaults:
       run:
         working-directory: ./infrastructure-live
+
+    env:
+      # Determine environment: usage of inputs context is only valid for workflow_dispatch
+      # We default to 'dev' for push events
+      TF_ENV: ${{ inputs.environment || 'dev' }}
 
     steps:
       - name: Checkout Code
@@ -42,7 +49,7 @@ jobs:
 
       - name: Select Workspace
         run: |
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform workspace select ${{ env.TF_ENV }} || terraform workspace new ${{ env.TF_ENV }}
 
       - name: Terraform Format Check
         run: terraform fmt -check
@@ -51,7 +58,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -var-file="${{ inputs.environment }}.tfvars" -out=tfplan
+        run: terraform plan -var-file="${{ env.TF_ENV }}.tfvars" -out=tfplan
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
