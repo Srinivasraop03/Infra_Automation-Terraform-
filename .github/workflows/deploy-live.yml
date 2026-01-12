@@ -20,14 +20,30 @@ on:
           - prod
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      tf_env: ${{ steps.set-env.outputs.tf_env }}
+    steps:
+      - id: set-env
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tf_env=prod" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.environment }}" == "prod" ]]; then
+             echo "tf_env=prod" >> $GITHUB_OUTPUT
+          else
+             echo "tf_env=dev" >> $GITHUB_OUTPUT
+          fi
+
   plan:
-    name: "Plan: ${{ inputs.environment || (startsWith(github.ref, 'refs/tags/') && 'prod') || 'dev' }}"
+    needs: setup
+    name: "Plan: ${{ needs.setup.outputs.tf_env }}"
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./infrastructure-live
     env:
-      TF_ENV: ${{ inputs.environment || (startsWith(github.ref, 'refs/tags/') && 'prod') || 'dev' }}
+      TF_ENV: ${{ needs.setup.outputs.tf_env }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-east-1
@@ -57,17 +73,17 @@ jobs:
           path: infrastructure-live/tfplan
 
   apply:
-    needs: plan
-    name: "Apply: ${{ inputs.environment || (startsWith(github.ref, 'refs/tags/') && 'prod') || 'dev' }}"
+    needs: [setup, plan]
+    name: "Apply: ${{ needs.setup.outputs.tf_env }}"
     runs-on: ubuntu-latest
-    # THIS IS THE GATE: The environment protection rule will PAUSE this specific job
+    # THIS IS THE GATE: Using an output guarantees GitHub resolves 'prod' correctly
     environment:
-      name: ${{ inputs.environment || (startsWith(github.ref, 'refs/tags/') && 'prod') || 'dev' }}
+      name: ${{ needs.setup.outputs.tf_env }}
     defaults:
       run:
         working-directory: ./infrastructure-live
     env:
-      TF_ENV: ${{ inputs.environment || (startsWith(github.ref, 'refs/tags/') && 'prod') || 'dev' }}
+      TF_ENV: ${{ needs.setup.outputs.tf_env }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-east-1
