@@ -9,7 +9,6 @@ on:
         type: choice
         options:
           - dev
-          - stage
           - prod
       confirmation:
         description: 'Type "DESTROY" to confirm'
