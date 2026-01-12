@@ -1,7 +1,7 @@
 environment        = "prod"
 vpc_cidr           = "10.1.0.0/16"
-azs_count          = 3
-single_nat_gateway = false # High Availability for Prod
+azs_count          = 2
+single_nat_gateway = true # Save EIPs and money
 
 instance_count    = 2
 instance_type     = "t2.micro"
