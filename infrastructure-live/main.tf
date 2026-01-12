@@ -56,13 +56,4 @@ module "compute" {
   iam_instance_profile = module.iam.instance_profile_name
 }
 
-# ------------------------------------------------------------------------------
-# 4. STORAGE (S3)
-# ------------------------------------------------------------------------------
-module "s3" {
-  source = "../terraform-modules/modules/aws/s3"
 
-  bucket_name        = "${var.bucket_name}-${var.environment}" # e.g. my-app-data-dev
-  environment        = var.environment
-  versioning_enabled = var.environment == "prod" ? true : false
-}
