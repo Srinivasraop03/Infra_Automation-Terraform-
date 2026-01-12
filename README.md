@@ -1,92 +1,120 @@
-# Infrastructure Automation (Terraform)
+# Enterprise Infrastructure Automation (Terraform)
 ![Build Status](https://github.com/Srinivasraop03/Infra_Automation-Terraform-/actions/workflows/deploy-live.yml/badge.svg)
 
+This repository hosts a production-ready, modular Infrastructure as Code (IaC) solution for AWS, powered by **Terraform** and **GitHub Actions**. It implements enterprise best practices including state locking, environment isolation (Dev/Prod), and automated CI/CD pipelines.
 
-This repository contains the Infrastructure as Code (IaC) to provision and manage AWS resources using Terraform. It is designed with modularity, scalability, and enterprise best practices in mind.
+---
 
-## Repository Layout
+## 🏗 Architecture & Design
 
-*   **`infrastructure-live/`**
-    *   Contains the "live" environment configurations (Workspaces for Dev, Stage, Prod).
-    *   Includes `backend.tf` (state configuration) and `main.tf` (resource instantiation).
-    *   **Note:** `*.tfvars` files are used for input values but sensitive secrets should be injected via CI/CD variables.
-*   **`terraform-modules/`**
-    *   Library of reusable Terraform modules (VPC, Compute, IAM, S3).
-    *   Ensures consistent resource configuration across all environments.
-*   **`scripts/`**
-    *   Utility scripts for maintenance (e.g., S3 backup/cleanup, bootstrapping).
-*   **`.github/workflows/`**
-    *   CI/CD Pipelines for automated Provisioning and Destruction.
+### 1. Modular Design
+- **`terraform-modules/`**: Contains reusable Terraform code (e.g., VPC, EC2, S3). Ideally versioned and treated as library code.
+- **`infrastructure-live/`**: The "Implementation" layer. This is where we call the modules and define environment-specific values (`dev.tfvars`, `prod.tfvars`).
 
-## Getting Started
+### 2. Environment Isolation
+We use **Terraform Workspaces** to maintain strict separation between environments within the same backend:
+- **`dev` workspace**: Sandbox environment, auto-deployed from `main`.
+- **`prod` workspace**: Production environment, deployed only from Tags with manual approval.
 
-### 1. Prerequisites
-*   AWS CLI installed and configured.
-*   Terraform v1.5+ installed.
-*   Git Bash (or compatible shell).
+### 3. Backend Strategy
+- **S3 Bucket**: Stores the Terraform state file (`terraform.tfstate`).
+- **DynamoDB**: Provides state locking to prevent concurrent writes/corruptions.
 
-### 2. Bootstrap State (One-Time Setup)
-Before running Terraform, you must create the remote state bucket and locking table.
-Run the included script:
+---
+
+## 🚀 CI/CD Pipelines (GitHub Actions)
+
+This project uses an automated "Promote to Production" strategy.
+
+| Environment | Trigger Event | Pipeline Action | Safety Mechanisms |
+| :--- | :--- | :--- | :--- |
+| **Development** | Push to `main` branch | Auto-deploys to `dev` workspace | Path filtering (only runs on infra changes) |
+| **Production** | Push Git Tag (`v*`) | Deploys to `prod` workspace | **Manual Approval** required in GitHub Environments |
+| **Destroy** | Manual Workflow Run | Destroys selected env | Requires user to type "YES" to confirm |
+
+### Detailed Workflows
+
+#### A. Deploying to Development
+Simply push your code to the main branch.
 ```bash
-./scripts/bootstrap.sh
+git add .
+git commit -m "feat: updated instance type"
+git push origin main
+# 🚀 GitHub Action triggers automatically and updates DEV.
 ```
 
-### 3. Usage
-**Plan Infrastructure:**
+#### B. Promoting to Production
+When Dev is stable, create a release tag.
 ```bash
-cd infrastructure-live
-terraform init
-terraform workspace new dev  # or select existing
-terraform plan -var-file="dev.tfvars"
+git tag v1.0.0
+git push origin v1.0.0
+# ✋ GitHub Action starts but PAUSES.
+# 📧 Go to GitHub Actions UI -> "Review Deployments" -> Approve to deploy to PROD.
 ```
 
-**Apply Infrastructure:**
-```bash
-terraform apply -var-file="dev.tfvars"
+#### C. Destroying Infrastructure
+1. Go to **Actions** tab.
+2. Select **"Destroy Infrastructure"**.
+3. Choose Environment (`dev` or `prod`).
+4. Type **`YES`** in the confirmation box.
+5. Click **Run**.
+
+---
+
+## 📂 Repository Structure
+
+```text
+├── .github/workflows/      # CI/CD Definitions
+│   ├── deploy-live.yml     # Handles Dev (Push) & Prod (Tag)
+│   └── destroy.yml         # Manual Destroy Workflow
+├── infrastructure-live/    # The Actual Infrastructure
+│   ├── dev.tfvars          # Variables for DEV (e.g., small instances)
+│   ├── prod.tfvars         # Variables for PROD (e.g., HA, large instances)
+│   └── main.tf             # Entry point calling modules
+├── terraform-modules/      # Reusable Modules
+├── scripts/                # Helper Scripts
+│   └── bootstrap.ps1       # One-time setup for S3 Backend/DynamoDB
+└── README.md               # Documentation
 ```
 
 ---
 
-## CI/CD Workflows
+## 🛠 Getting Started (First Time Setup)
 
-This project includes GitHub Actions workflows for automated management.
+If you are forking or setting this up from scratch:
 
-### Provision Pipeline (`provision.yml`)
-*   **Trigger:** Manual (Workflow Dispatch).
-*   **Input:** Select Environment (dev/stage/prod).
-*   **Action:** Runs `terraform plan` and `terraform apply`.
+### 1. Bootstrap Backend
+Run the provided script to create the S3 Bucket and DynamoDB Table required for Terraform State.
+```powershell
+./scripts/bootstrap.ps1
+```
 
-### Destroy Pipeline (`destroy.yml`)
-*   **Trigger:** Manual.
-*   **Input:** Environment + Confirmation text ("DESTROY").
-*   **Action:** Tears down all infrastructure in the selected environment.
+### 2. Configure GitHub Secrets
+Go to **Settings > Secrets and variables > Actions** and add:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
 
-**Setup Required:**
-Add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to GitHub Repository Secrets.
+### 3. Setup GitHub Environment (For Approval)
+1. Go to **Settings > Environments**.
+2. Create an environment named **`prod`**.
+3. Enable **"Required Reviewers"** and add yourself.
 
 ---
 
-## Enterprise Roadmap & Architecture Guide
+## 📝 Configuration Files (`.tfvars`)
 
-To elevate this project to a fully enterprise-grade platform, the following standards are recommended:
+The infrastructure differences are controlled entirely by these files:
 
-### 1. Security & Authentication
-*   **Current:** Long-lived AWS Access Keys.
-*   **Target:** **OpenID Connect (OIDC)**. Eliminate keys by allowing GitHub Actions to assume a temporary IAM Role.
+**`dev.tfvars`**
+```hcl
+environment = "dev"
+instance_type = "t3.micro"
+single_nat_gateway = true  # Save money
+```
 
-### 2. GitOps Workflow
-*   **Current:** Manual Trigger.
-*   **Target:** **Pull Request Automation**.
-    *   **PR Open:** Auto-run `terraform plan`. Post results as a PR comment.
-    *   **PR Merge:** Auto-run `terraform apply` to Dev/Stage.
-    *   **Release Tag:** Trigger deployment to Production with manual approval gates.
-
-### 3. State Isolation
-*   **Current:** Terraform Workspaces (Shared `main.tf`).
-*   **Target:** **Directory Isolation**.
-    *   Split into `live/dev`, `live/prod` folders. This isolates failure domains (breaking Dev config won't break Prod).
-
-### 4. Continuous Compliance
-*   **Drift Detection:** Nightly scheduled cron jobs to detect manual changes in AWS.
-*   **Static Analysis:** Integrate `tfsec` or `checkov` in CI to block insecure code (e.g., open security groups) before merge.
+**`prod.tfvars`**
+```hcl
+environment = "prod"
+instance_type = "m5.large"
+single_nat_gateway = false # High Availability
+```
