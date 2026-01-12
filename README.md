@@ -1,4 +1,6 @@
 # Infrastructure Automation (Terraform)
+![Build Status](https://github.com/Srinivasraop03/Infra_Automation-Terraform-/actions/workflows/deploy-live.yml/badge.svg)
+
 
 This repository contains the Infrastructure as Code (IaC) to provision and manage AWS resources using Terraform. It is designed with modularity, scalability, and enterprise best practices in mind.
 
