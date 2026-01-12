@@ -4,22 +4,25 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to destroy (dev, stage, prod)'
+        description: "Environment to destroy (dev, stage, prod)"
         required: true
         type: choice
         options:
-        - dev
-        - stage
-        - prod
+          - dev
+          - stage
+          - prod
       confirmation:
         description: 'Type "DESTROY" to confirm'
         required: true
-        default: 'NO'
+        default: "NO"
 
 jobs:
   terraform:
     name: "Terraform Destroy"
     runs-on: ubuntu-latest
+    # Safety: Enforce environment protection rules (e.g. Manual Approval for Prod)
+    environment:
+      name: ${{ inputs.environment }}
     defaults:
       run:
         working-directory: ./infrastructure-live
