@@ -57,3 +57,21 @@ module "compute" {
 }
 
 
+
+# ------------------------------------------------------------------------------
+# 4. KUBERNETES (EKS)
+# ------------------------------------------------------------------------------
+module "eks" {
+  source = "git::https://github.com/Srinivasraop03/Infra_Terraform_Modules.git//modules/aws/eks?ref=main"
+
+  cluster_name = "${var.cluster_name}-cluster"
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+  subnet_ids   = module.vpc.private_subnet_ids
+
+  # Node Group Configuration
+  instance_types = [var.instance_type]
+  min_size       = 1
+  max_size       = 2
+  desired_size   = 1
+}
