@@ -4,6 +4,7 @@
 This repository hosts a production-ready, modular Infrastructure as Code (IaC) solution for AWS, powered by **Terraform** and **GitHub Actions**. It implements enterprise best practices including state locking, environment isolation (Dev/Prod), and automated CI/CD pipelines.
 
 ---
+<!-- Triggering pipeline test to verify DEV vs PROD isolation -->
 
 ## 🏗 Architecture & Design
 
