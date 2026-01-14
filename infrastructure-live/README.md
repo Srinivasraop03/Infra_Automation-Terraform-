@@ -5,6 +5,7 @@ This directory contains the "instantiation" of our infrastructure. It consumes t
 ## 📂 Directory Structure
 
 - **`main.tf`**: The primary entry point. It calls modules like `vpc`, `compute`, `iam` and passes in variables.
+<!-- Trigger Test -->
 - **`variables.tf`**: Declaration of input variables (e.g., region, instance_type).
 - **`dev.tfvars`**: Values specific to the Development environment (e.g., smaller instances).
 - **`prod.tfvars`**: Values specific to Production (e.g., larger instances, high availability).
