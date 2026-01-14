@@ -1,21 +1,42 @@
-Run order and notes
+# Infrastructure Live Implementation
 
- - Bootstrap first (no tfvars required):
-   - cd bootstrap
-   - terraform init
-   - terraform plan
-   - terraform apply
-   - This creates the S3 bucket and DynamoDB table used for remote state locking.
+This directory contains the "instantiation" of our infrastructure. It consumes the generic modules (from external repo) and applies specific configurations for each environment.
 
- - Then the live infrastructure (after bootstrap completes):
-   - cd ..
-   - terraform init -reconfigure
-   - Create workspaces as needed (e.g., `terraform workspace new dev`)
-   - terraform plan -var-file="dev.tfvars"      # or prod.tfvars
-   - terraform apply -var-file="dev.tfvars"
+## 📂 Directory Structure
 
-Important notes:
-- The `bootstrap` module output `s3_bucket_name` now uses the S3 module's `bucket_id` output.
-- `dev.tfvars` currently exposes SSH from `0.0.0.0/0` — only acceptable for short-lived testing. Restrict this before long-term use.
-- The compute module currently consumes a single `subnet_id` (`module.vpc.private_subnet_ids[0]`). For HA, consider spreading instances across private subnets and AZs.
-- Consider adding `aws_s3_bucket_public_access_block` and KMS encryption for state buckets if required by your security posture.
+- **`main.tf`**: The primary entry point. It calls modules like `vpc`, `compute`, `iam` and passes in variables.
+- **`variables.tf`**: Declaration of input variables (e.g., region, instance_type).
+- **`dev.tfvars`**: Values specific to the Development environment (e.g., smaller instances).
+- **`prod.tfvars`**: Values specific to Production (e.g., larger instances, high availability).
+- **`bootstrap/`**: Contains the Terraform configuration to creates the S3 Backend and DynamoDB table.
+
+## 🌍 Workspaces
+
+We use **Terraform Workspaces** to separate state files within the same S3 bucket:
+
+| Environment | Workspace Name | Config File |
+| :--- | :--- | :--- |
+| **Development** | `dev` | `dev.tfvars` |
+| **Production** | `prod` | `prod.tfvars` |
+
+## 🛠 How to run locally (Debugging only)
+
+**Note:** In normal operation, GitHub Actions handles this. Only run locally for debugging.
+
+1.  **Initialize**:
+    ```bash
+    terraform init
+    ```
+2.  **Select Workspace**:
+    ```bash
+    terraform workspace select dev
+    # OR create if missing: terraform workspace new dev
+    ```
+3.  **Plan**:
+    ```bash
+    terraform plan -var-file="dev.tfvars"
+    ```
+4.  **Apply**:
+    ```bash
+    terraform apply -var-file="dev.tfvars"
+    ```

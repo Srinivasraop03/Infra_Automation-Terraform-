@@ -35,8 +35,28 @@ jobs:
              echo "tf_env=dev" >> $GITHUB_OUTPUT
           fi
 
-  plan:
+  scan:
     needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov Security Scan
+        # continue-on-error: true acts like soft_fail, preventing pipeline failure
+        continue-on-error: true
+        run: checkov -d infrastructure-live --framework terraform
+
+  plan:
+    needs: [setup, scan]
     name: "Plan: ${{ needs.setup.outputs.tf_env }}"
     runs-on: ubuntu-latest
     defaults:
