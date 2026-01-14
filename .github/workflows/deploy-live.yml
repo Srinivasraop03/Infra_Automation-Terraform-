@@ -53,7 +53,7 @@ jobs:
       - name: Run Checkov Security Scan
         # continue-on-error: true acts like soft_fail, preventing pipeline failure
         continue-on-error: true
-        run: checkov -d infrastructure-live --framework terraform
+        run: checkov -d infrastructure-live --framework terraform --download-external-modules true
 
   plan:
     needs: [setup, scan]
