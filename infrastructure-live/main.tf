@@ -17,9 +17,9 @@ module "vpc" {
   public_subnet_cidrs  = [for i in range(var.azs_count) : cidrsubnet(var.vpc_cidr, 8, i)]
   private_subnet_cidrs = [for i in range(var.azs_count) : cidrsubnet(var.vpc_cidr, 8, i + 10)]
 
-  enable_nat_gateway     = true
-  single_nat_gateway     = var.single_nat_gateway
-  one_nat_gateway_per_az = !var.single_nat_gateway # If not single, do one per AZ (HA)
+  enable_nat_gateway = true
+  single_nat_gateway = var.single_nat_gateway
+
 }
 
 # ------------------------------------------------------------------------------
