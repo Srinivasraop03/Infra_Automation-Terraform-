@@ -81,10 +81,11 @@ module "eks" {
   # Passed as a map, matching variable "node_groups"
   node_groups = {
     general = {
-      desired_size   = 1
-      max_size       = 2
-      min_size       = 1
-      instance_types = [var.instance_type]
+      desired_size    = 1
+      max_size        = 2
+      min_size        = 1
+      max_unavailable = 1
+      instance_types  = [var.instance_type]
     }
   }
 }
