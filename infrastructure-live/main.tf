@@ -72,9 +72,10 @@ resource "aws_kms_key" "eks" {
 module "eks" {
   source = "git::https://github.com/Srinivasraop03/Infra_Terraform_Modules.git//modules/aws/eks?ref=main"
 
-  cluster_name = "${var.cluster_name}-cluster"
-  vpc_id       = module.vpc.vpc_id
-  subnet_ids   = module.vpc.private_subnet_ids
+  cluster_name    = "${var.cluster_name}-cluster"
+  cluster_version = "1.30"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnet_ids
 
   kms_key_arn = aws_kms_key.eks.arn
 
