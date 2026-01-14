@@ -61,17 +61,30 @@ module "compute" {
 # ------------------------------------------------------------------------------
 # 4. KUBERNETES (EKS)
 # ------------------------------------------------------------------------------
+
+# KMS Key is REQUIRED by the module
+resource "aws_kms_key" "eks" {
+  description             = "EKS Secret Encryption Key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
 module "eks" {
   source = "git::https://github.com/Srinivasraop03/Infra_Terraform_Modules.git//modules/aws/eks?ref=main"
 
   cluster_name = "${var.cluster_name}-cluster"
-  environment  = var.environment
   vpc_id       = module.vpc.vpc_id
   subnet_ids   = module.vpc.private_subnet_ids
 
-  # Node Group Configuration
-  instance_types = [var.instance_type]
-  min_size       = 1
-  max_size       = 2
-  desired_size   = 1
+  kms_key_arn = aws_kms_key.eks.arn
+
+  # Passed as a map, matching variable "node_groups"
+  node_groups = {
+    general = {
+      desired_size   = 1
+      max_size       = 2
+      min_size       = 1
+      instance_types = [var.instance_type]
+    }
+  }
 }
