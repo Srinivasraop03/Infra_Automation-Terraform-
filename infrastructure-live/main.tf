@@ -6,7 +6,7 @@ provider "aws" {
 # 1. NETWORKING (VPC)
 # ------------------------------------------------------------------------------
 module "vpc" {
-  source = "../terraform-modules/modules/aws/vpc"
+  source = "git::https://github.com/Srinivasraop03/Infra_Terraform_Modules.git//modules/aws/vpc?ref=main"
 
   vpc_name    = "${var.cluster_name}-vpc"
   environment = var.environment
@@ -26,7 +26,7 @@ module "vpc" {
 # 2. IAM & SECURITY
 # ------------------------------------------------------------------------------
 module "iam" {
-  source = "../terraform-modules/modules/aws/iam-roles"
+  source = "git::https://github.com/Srinivasraop03/Infra_Terraform_Modules.git//modules/aws/iam-roles?ref=main"
 
   cluster_name            = var.cluster_name
   environment             = var.environment
@@ -38,7 +38,7 @@ module "iam" {
 # 3. COMPUTE (EC2)
 # ------------------------------------------------------------------------------
 module "compute" {
-  source = "../terraform-modules/modules/aws/compute"
+  source = "git::https://github.com/Srinivasraop03/Infra_Terraform_Modules.git//modules/aws/compute?ref=main"
 
   cluster_name = var.cluster_name
   environment  = var.environment

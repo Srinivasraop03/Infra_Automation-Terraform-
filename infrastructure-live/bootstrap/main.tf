@@ -15,7 +15,7 @@ provider "aws" {
 # 1. Terraform State Bucket
 # Uses your existing module to ensure standard tagging/encryption/versioning
 module "tf_state_bucket" {
-  source = "../../terraform-modules/modules/aws/s3"
+  source = "git::https://github.com/Srinivasraop03/Infra_Terraform_Modules.git//modules/aws/s3?ref=main"
 
   bucket_name        = "terraform-infra-state-bucket-srini" # Updated for uniqueness
   environment        = "global"

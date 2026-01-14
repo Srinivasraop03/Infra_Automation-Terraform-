@@ -8,7 +8,7 @@ This repository hosts a production-ready, modular Infrastructure as Code (IaC) s
 ## 🏗 Architecture & Design
 
 ### 1. Modular Design
-- **`terraform-modules/`**: Contains reusable Terraform code (e.g., VPC, EC2, S3). Ideally versioned and treated as library code.
+- **Modules Registry**: Modules are now hosted in a separate repository [Infra_Terraform_Modules](https://github.com/Srinivasraop03/Infra_Terraform_Modules), allowing for versioning and reuse across projects.
 - **`infrastructure-live/`**: The "Implementation" layer. This is where we call the modules and define environment-specific values (`dev.tfvars`, `prod.tfvars`).
 
 ### 2. Environment Isolation
@@ -71,7 +71,7 @@ git push origin v1.0.0
 │   ├── dev.tfvars          # Variables for DEV (e.g., small instances)
 │   ├── prod.tfvars         # Variables for PROD (e.g., HA, large instances)
 │   └── main.tf             # Entry point calling modules
-├── terraform-modules/      # Reusable Modules
+
 ├── scripts/                # Helper Scripts
 │   └── bootstrap.ps1       # One-time setup for S3 Backend/DynamoDB
 └── README.md               # Documentation
