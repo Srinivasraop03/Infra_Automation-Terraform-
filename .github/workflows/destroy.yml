@@ -10,6 +10,10 @@ on:
         options:
           - dev
           - prod
+      terraform_target:
+        description: "Specific resource to destroy (e.g. module.compute). Leave empty for ALL."
+        required: false
+        type: string
       confirmation:
         description: 'Type "YES" to confirm'
         required: true
@@ -57,4 +61,11 @@ jobs:
         run: terraform workspace select ${{ inputs.environment }}
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve -var-file="${{ inputs.environment }}.tfvars"
+        run: |
+          if [ -n "${{ inputs.terraform_target }}" ]; then
+            echo "🔥 Running TARGETED Destroy on: ${{ inputs.terraform_target }}"
+            terraform destroy -auto-approve -var-file="${{ inputs.environment }}.tfvars" -target="${{ inputs.terraform_target }}"
+          else
+            echo "🔥 Running FULL Destroy"
+            terraform destroy -auto-approve -var-file="${{ inputs.environment }}.tfvars"
+          fi
