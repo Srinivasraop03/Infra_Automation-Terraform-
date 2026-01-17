@@ -40,9 +40,28 @@ jobs:
             - name: Terraform Init
               run: terraform init
 
-            - name: Terraform Apply
+            - name: Check Existing State & Apply
               if: ${{ inputs.action == 'apply' }}
-              run: terraform apply -auto-approve
+              id: check
+              run: |
+                  ROLE_NAME="github-actions-oidc-role"
+
+                  # Check if Role exists
+                  if aws iam get-role --role-name $ROLE_NAME 2>/dev/null; then
+                    echo "✅ Role '$ROLE_NAME' already exists. Skipping Terraform Apply."
+                    
+                    # Fetch ARN directly from AWS
+                    ARN=$(aws iam get-role --role-name $ROLE_NAME --query 'Role.Arn' --output text)
+                    
+                    echo "::notice title=OIDC Role ARN::${ARN}"
+                    echo "----------------------------------------------"
+                    echo "EXISTING ROLE ARN: ${ARN}"
+                    echo "----------------------------------------------"
+                    echo "Use this ARN in your 'AWS_ROLE_ARN' secret."
+                  else
+                    echo "🚀 Role not found. Proceeding with Terraform..."
+                    terraform apply -auto-approve
+                  fi
 
             - name: Empty S3 Bucket (Before Destroy)
               if: ${{ inputs.action == 'destroy' }}
