@@ -34,53 +34,8 @@ jobs:
              echo "tf_env=dev" >> $GITHUB_OUTPUT
           fi
 
-  scan:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install Checkov
-        run: pip install checkov
-
-      - name: Run Checkov Security Scan
-        # continue-on-error: true acts like soft_fail, preventing pipeline failure
-        continue-on-error: true
-        run: checkov -d infrastructure-live --framework terraform --download-external-modules true
-
-  validate:
-    needs: setup
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./infrastructure-live
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.7
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-        continue-on-error: false
-
-      - name: Terraform Init (Backendless)
-        run: terraform init -backend=false
-
-      - name: Terraform Validate
-        run: terraform validate
-
   plan:
-    needs: [setup, scan, validate]
+    needs: setup
     name: "Plan: ${{ needs.setup.outputs.tf_env }}"
     runs-on: ubuntu-latest
     permissions:
@@ -97,18 +52,41 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      # 1. Quality Check (Format)
+      - name: Terraform Format
+        run: terraform fmt -check -recursive
+
+      # 2. Syntax Check (Validate)
+      - name: Terraform Init & Validate
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      # 3. Security Scan (Checkov)
+      - name: Setup Python for Checkov
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Run Checkov
+        continue-on-error: true # Soft fail for now
+        run: |
+          pip install checkov
+          checkov -d . --framework terraform --download-external-modules true
+
+      # 4. Real Plan
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.7
-
-      - name: Terraform Init
+      - name: Terraform Init (Live)
         run: terraform init
 
       - name: Select Workspace
