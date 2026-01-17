@@ -1,0 +1,49 @@
+name: Bootstrap Backend (Setup S3 & OIDC)
+
+on:
+    workflow_dispatch:
+        inputs:
+            action:
+                description: "Action to perform"
+                required: true
+                type: choice
+                default: "apply"
+                options:
+                    - apply
+                    - destroy
+
+jobs:
+    bootstrap:
+        name: "Bootstrap: ${{ inputs.action }}"
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./infrastructure-live/bootstrap
+
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v3
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v2
+              with:
+                  terraform_version: 1.5.7
+
+            # We utilize Keys here because OIDC credentials (the Role) don't exist yet!
+            - name: Configure AWS Credentials (Keys)
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: us-east-1
+
+            - name: Terraform Init
+              run: terraform init
+
+            - name: Terraform Apply
+              if: ${{ inputs.action == 'apply' }}
+              run: terraform apply -auto-approve
+
+            - name: Terraform Destroy
+              if: ${{ inputs.action == 'destroy' }}
+              run: terraform destroy -auto-approve
