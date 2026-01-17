@@ -1,4 +1,4 @@
-name: Destroy Infrastructure
+name: Destroy Live Infrastructure
 
 on:
   workflow_dispatch:
@@ -10,14 +10,6 @@ on:
         options:
           - dev
           - prod
-      destroy_target:
-        description: "What do you want to destroy?"
-        required: true
-        type: choice
-        default: "Infrastructure_Only"
-        options:
-          - Infrastructure_Only
-          - S3_State_Bucket_Only
       confirmation:
         description: 'Type "YES" to confirm'
         required: true
@@ -25,7 +17,7 @@ on:
 
 jobs:
   destroy:
-    name: "Destroy: ${{ inputs.destroy_target }}"
+    name: "Destroy: ${{ inputs.environment }}"
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.environment }}
@@ -52,38 +44,16 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # ---------------------------------------------------------
-      # CASE A: Destroy Standard Infrastructure (VPC, EC2, EKS)
-      # ---------------------------------------------------------
       - name: Setup Terraform
-        if: ${{ inputs.destroy_target == 'Infrastructure_Only' }}
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7
 
       - name: Terraform Init
-        if: ${{ inputs.destroy_target == 'Infrastructure_Only' }}
         run: terraform init
 
       - name: Select Workspace
-        if: ${{ inputs.destroy_target == 'Infrastructure_Only' }}
         run: terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
 
       - name: Terraform Destroy
-        if: ${{ inputs.destroy_target == 'Infrastructure_Only' }}
-        run: |
-          echo "🔥 Running FULL Infrastructure Destroy"
-          terraform destroy -auto-approve -var-file="${{ inputs.environment }}.tfvars"
-
-      # ---------------------------------------------------------
-      # CASE B: Destroy S3 State Bucket (Nuclear Option)
-      # ---------------------------------------------------------
-      - name: Destroy S3 Backend
-        if: ${{ inputs.destroy_target == 'S3_State_Bucket_Only' }}
-        # We run the script from the root context (../) relative to infrastructure-live
-        # OR just change working-directory for this step.
-        working-directory: .
-        shell: pwsh
-        run: |
-          echo "💣 DESTROYING S3 STATE BUCKET"
-          ./scripts/empty_delete_s3_bucket.ps1 -AutoApprove
+        run: terraform destroy -auto-approve -var-file="${{ inputs.environment }}.tfvars"
