@@ -1,20 +1,10 @@
 # Helper Scripts
 
-This directory contains utility scripts to automate common setup and maintenance tasks.
-
-./bootstrap.ps1
-```
-
-## 2. Git Push Helper (`git_push.sh`)
-**OS**: Linux / Git Bash
-**Purpose**: Simplifies the git commit and push workflow.
-
-**What it does**:
-- Adds all changes (`git add .`).
-- Commits with your provided message.
-- Pushes to `origin main`.
+## 1. Git Push Helper (`git_push.ps1`)
+**OS**: Windows (PowerShell)
+**Purpose**: Formats code, asks for CI trigger, and pushes to GitHub.
 
 **Usage**:
-```bash
-./scripts/git_push.sh "your commit message"
+```powershell
+./scripts/git_push.ps1 "your message"
 ```

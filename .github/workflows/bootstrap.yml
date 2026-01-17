@@ -44,6 +44,29 @@ jobs:
               if: ${{ inputs.action == 'apply' }}
               run: terraform apply -auto-approve
 
+            - name: Empty S3 Bucket (Before Destroy)
+              if: ${{ inputs.action == 'destroy' }}
+              run: |
+                  # 1. Get Bucket Name
+                  BUCKET_NAME=$(terraform output -raw s3_bucket_name)
+                  echo "Emptying bucket: $BUCKET_NAME"
+
+                  # 2. Delete all Object Versions
+                  echo "Deleting Object Versions..."
+                  aws s3api list-object-versions --bucket $BUCKET_NAME --output json --query 'Versions[].{Key:Key,VersionId:VersionId}' > versions.json
+                  if [ -s versions.json ] && [ "$(cat versions.json)" != "null" ]; then
+                    aws s3api delete-objects --bucket $BUCKET_NAME --delete "{\"Objects\": $(cat versions.json)}"
+                  fi
+
+                  # 3. Delete all Delete Markers
+                  echo "Deleting Delete Markers..."
+                  aws s3api list-object-versions --bucket $BUCKET_NAME --output json --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' > markers.json
+                  if [ -s markers.json ] && [ "$(cat markers.json)" != "null" ]; then
+                    aws s3api delete-objects --bucket $BUCKET_NAME --delete "{\"Objects\": $(cat markers.json)}"
+                  fi
+
+                  echo "Bucket emptied!"
+
             - name: Terraform Destroy
               if: ${{ inputs.action == 'destroy' }}
               run: terraform destroy -auto-approve
