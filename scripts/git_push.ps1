@@ -3,18 +3,26 @@ param (
     [string]$Message
 )
 
-# Navigate to the script's root (assuming script is in /scripts and we want project root)
+$ErrorActionPreference = "Stop"
 $ScriptRoot = $PSScriptRoot
 $ProjectRoot = Split-Path -Parent $ScriptRoot
 Set-Location $ProjectRoot
 
-Write-Host "1. Adding all changes from project root..." -ForegroundColor Cyan
+# 1. Format
+Write-Host "1. DRY RUN: Formatting Terraform code..." -ForegroundColor Cyan
+terraform fmt -recursive
+if ($LASTEXITCODE -ne 0) { Write-Error "Terraform Format failed!"; exit 1 }
+
+# 2. Add
+Write-Host "2. Adding all changes..." -ForegroundColor Cyan
 git add .
 
-Write-Host "2. Committing with message: '$Message'..." -ForegroundColor Cyan
+# 3. Commit
+Write-Host "3. Committing with message: '$Message'..." -ForegroundColor Cyan
 git commit -m "$Message"
 
-Write-Host "3. Pushing to origin main..." -ForegroundColor Cyan
+# 4. Push
+Write-Host "4. Pushing to origin main..." -ForegroundColor Cyan
 git push origin main
 
 Write-Host "Done! Code successfully pushed to GitHub." -ForegroundColor Green
