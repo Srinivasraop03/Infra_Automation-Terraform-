@@ -18,8 +18,15 @@ Write-Host "2. Adding all changes..." -ForegroundColor Cyan
 git add .
 
 # 3. Commit
-Write-Host "3. Committing with message: '$Message'..." -ForegroundColor Cyan
-git commit -m "$Message"
+$FinalMessage = $Message
+$SkipCI = Read-Host "Skip CI/CD Trigger? (y/N)"
+if ($SkipCI -eq 'y' -or $SkipCI -eq 'Y') {
+    $FinalMessage = "$Message [skip ci]"
+    Write-Host "Skipping CI build explicitly." -ForegroundColor Yellow
+}
+
+Write-Host "3. Committing with message: '$FinalMessage'..." -ForegroundColor Cyan
+git commit -m "$FinalMessage"
 
 # 4. Push
 Write-Host "4. Pushing to origin main..." -ForegroundColor Cyan
