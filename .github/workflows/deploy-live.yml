@@ -54,8 +54,33 @@ jobs:
         continue-on-error: true
         run: checkov -d infrastructure-live --framework terraform --download-external-modules true
 
+  validate:
+    needs: setup
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infrastructure-live
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        continue-on-error: false
+
+      - name: Terraform Init (Backendless)
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
   plan:
-    needs: [setup, scan]
+    needs: [setup, scan, validate]
     name: "Plan: ${{ needs.setup.outputs.tf_env }}"
     runs-on: ubuntu-latest
     permissions:
