@@ -1,6 +1,9 @@
 name: Bootstrap Backend (Setup S3 & OIDC)
 
 on:
+    push:
+        paths:
+            - "bootstrap/**"
     workflow_dispatch:
         inputs:
             action:
@@ -14,11 +17,11 @@ on:
 
 jobs:
     bootstrap:
-        name: "Bootstrap: ${{ inputs.action }}"
+        name: "Bootstrap: ${{ inputs.action || 'apply' }}" # Default to apply on auto-trigger
         runs-on: ubuntu-latest
         defaults:
             run:
-                working-directory: ./infrastructure-live/bootstrap
+                working-directory: ./bootstrap
 
         steps:
             - name: Checkout Code
@@ -41,7 +44,7 @@ jobs:
               run: terraform init
 
             - name: Check Existing State & Apply
-              if: ${{ inputs.action == 'apply' }}
+              if: ${{ inputs.action == 'apply' || inputs.action == '' }}
               id: check
               run: |
                   ROLE_NAME="github-actions-oidc-role"

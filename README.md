@@ -66,15 +66,12 @@ git push origin v1.0.0
 
 ```text
 ├── .github/workflows/      # CI/CD Definitions
-│   ├── deploy-live.yml     # Handles Dev (Push) & Prod (Tag)
-│   └── destroy.yml         # Manual Destroy Workflow
-├── infrastructure-live/    # The Actual Infrastructure
-│   ├── dev.tfvars          # Variables for DEV (e.g., small instances)
-│   ├── prod.tfvars         # Variables for PROD (e.g., HA, large instances)
-│   └── main.tf             # Entry point calling modules
-
+│   ├── bootstrap.yml       # Setup S3/OIDC (Layer 0)
+│   ├── deploy-live.yml     # App Deploy (Layer 1)
+│   └── destroy.yml         # App Destroy
+├── bootstrap/              # Terraform for S3/OIDC
+├── infrastructure-live/    # Terraform for App
 ├── scripts/                # Helper Scripts
-│   └── bootstrap.ps1       # One-time setup for S3 Backend/DynamoDB
 └── README.md               # Documentation
 ```
 
