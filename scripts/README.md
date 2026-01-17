@@ -2,18 +2,6 @@
 
 This directory contains utility scripts to automate common setup and maintenance tasks.
 
-## 1. Bootstrap (`bootstrap.ps1`)
-**OS**: Windows (PowerShell)
-**Purpose**: One-time setup script to initialize the Terraform backend.
-
-**What it does**:
-- Creates an AWS S3 Bucket (for storing `terraform.tfstate`).
-- Enables Versioning and Encryption on the bucket.
-- Creates a DynamoDB Table (for State Locking).
-- Generates a `backend.tf` file (if needed).
-
-**Usage**:
-```powershell
 ./bootstrap.ps1
 ```
 

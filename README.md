@@ -84,11 +84,13 @@ git push origin v1.0.0
 
 If you are forking or setting this up from scratch:
 
-### 1. Bootstrap Backend
-Run the provided script to create the S3 Bucket and DynamoDB Table required for Terraform State.
-```powershell
-./scripts/bootstrap.ps1
-```
+### 1. Bootstrap Backend & OIDC (One-Time Setup)
+We use a **GitHub Action** to bootstrap the account.
+1. Go to **Settings > Secrets > Actions** and add temporary AWS Keys (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
+2. Go to **Actions** tab -> Select **Bootstrap Backend**.
+3. Click **Run Workflow** -> `apply`.
+4. Wait for completion.
+5. Copy the `github_actions_role_arn` from the logs.
 
 ### 2. Configure GitHub Secrets
 Go to **Settings > Secrets and variables > Actions** and add:
