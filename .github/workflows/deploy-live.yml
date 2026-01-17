@@ -59,18 +59,25 @@ jobs:
     needs: [setup, scan]
     name: "Plan: ${{ needs.setup.outputs.tf_env }}"
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: ./infrastructure-live
     env:
       TF_ENV: ${{ needs.setup.outputs.tf_env }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-east-1
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -96,6 +103,9 @@ jobs:
     needs: [setup, plan]
     name: "Apply: ${{ needs.setup.outputs.tf_env }}"
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     # THIS IS THE GATE: Using an output guarantees GitHub resolves 'prod' correctly
     environment:
       name: ${{ needs.setup.outputs.tf_env }}
@@ -104,13 +114,17 @@ jobs:
         working-directory: ./infrastructure-live
     env:
       TF_ENV: ${{ needs.setup.outputs.tf_env }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-east-1
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
