@@ -34,6 +34,23 @@ jobs:
              echo "tf_env=dev" >> $GITHUB_OUTPUT
           fi
 
+      - name: 📧 Notify Start
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "🚀 Deployment Started: ${{ github.repository }} (${{ steps.set-env.outputs.tf_env }})"
+          body: |
+            Deployment process initiated.
+            User: ${{ github.actor }}
+            Branch: ${{ github.ref_name }}
+            Environment: ${{ steps.set-env.outputs.tf_env }}
+            Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <${{ secrets.MAIL_USERNAME }}>
+
   plan:
     needs: setup
     name: "Plan: ${{ needs.setup.outputs.tf_env }}"
@@ -101,6 +118,21 @@ jobs:
           name: tfplan-${{ env.TF_ENV }}
           path: infrastructure-live/tfplan
 
+      - name: 📧 Notify Execution Failure (Plan)
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Plan Failed: ${{ github.repository }} (${{ env.TF_ENV }})"
+          body: |
+            Terraform Plan failed for environment: ${{ env.TF_ENV }}
+            Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <${{ secrets.MAIL_USERNAME }}>
+
   apply:
     needs: [setup, plan]
     name: "Apply: ${{ needs.setup.outputs.tf_env }}"
@@ -147,3 +179,35 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
+
+      - name: 📧 Notify Success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ Deployment Successful: ${{ github.repository }} (${{ env.TF_ENV }})"
+          body: |
+            Deployment completed successfully!
+            Environment: ${{ env.TF_ENV }}
+            Branch: ${{ github.ref_name }}
+            View run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <${{ secrets.MAIL_USERNAME }}>
+
+      - name: 📧 Notify Failure (Apply)
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Deployment Failed: ${{ github.repository }} (${{ env.TF_ENV }})"
+          body: |
+            Terraform Apply failed for environment: ${{ env.TF_ENV }}
+            Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <${{ secrets.MAIL_USERNAME }}>
