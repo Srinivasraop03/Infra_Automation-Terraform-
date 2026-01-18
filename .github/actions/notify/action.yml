@@ -1,0 +1,124 @@
+name: "Smart Email Notification"
+description: "Sends email notifications for workflow Success and Failure"
+inputs:
+  status:
+    description: "Status of the notification (success or failure)"
+    required: true
+  stage:
+    description: "Current stage (Setup, Plan, Apply)"
+    required: true
+  env:
+    description: "Target Environment"
+    required: true
+  mail_user:
+    description: "SMTP Username"
+    required: true
+  mail_pass:
+    description: "SMTP Password"
+    required: true
+  job_status:
+    description: "The official GitHub job status (success, failure, cancelled)"
+    required: false
+    default: "success"
+runs:
+  using: "composite"
+  steps:
+    - name: Send Notification
+      shell: python
+      env:
+        MAIL_USER: ${{ inputs.mail_user }}
+        MAIL_PASS: ${{ inputs.mail_pass }}
+        REPO: ${{ github.repository }}
+        ACTOR: ${{ github.actor }}
+        ENV: ${{ inputs.env }}
+        SHA: ${{ github.sha }}
+        RUN_ID: ${{ github.run_id }}
+        STATUS: ${{ inputs.status }}
+        STAGE: ${{ inputs.stage }}
+        JOB_STATUS: ${{ inputs.job_status }}
+        # Logic to get the commit message correctly from context or input is tricky in composite
+        # because 'inputs' from the workflow dispatch aren't directly available unless passed.
+        # We will assume the caller sets valid environment variables or we rely on github context.
+        # However, to be consistent with the previous logic, we should probably pass the message as an input too.
+        # But to keep it simple as requested ("one notify step"), let's try to grab it from env if plausible
+        # or just grab it from github context directly in python.
+        # Be safe: Let's assume the caller passes the message, or we grab head_commit.
+        EVENT_NAME: ${{ github.event_name }}
+        # We need to access the secrets. Composite actions can't access 'secrets.*' directly in 'env' map
+        # unless passed as inputs, which we did.
+      run: |
+        import smtplib, os, json
+        from email.mime.text import MIMEText
+
+        # --- Inputs ---
+        sender = os.environ['MAIL_USER']
+        password = os.environ['MAIL_PASS']
+        repo = os.environ['REPO']
+        env = os.environ['ENV']
+        status = os.environ['STATUS'].lower()
+        stage = os.environ['STAGE']
+        run_id = os.environ['RUN_ID']
+        actor = os.environ['ACTOR']
+        event_name = os.environ['EVENT_NAME']
+
+        # --- Handle Commit Message Logic ---
+        # In a composite action, we might not have easy access to 'inputs.message'. 
+        # We will try to read it from an env var 'OVERRIDE_MESSAGE' if set by caller, 
+        # otherwise fall back to git commit.
+
+        commit_msg = os.environ.get('OVERRIDE_MESSAGE', '')
+        if not commit_msg:
+            # Fallback to loading from event.json which is present in the runner
+            event_path = os.environ.get('GITHUB_EVENT_PATH')
+            if event_path and os.path.exists(event_path):
+                try:
+                    with open(event_path, 'r') as f:
+                        data = json.load(f)
+                        # Try to get message from head_commit
+                        if 'head_commit' in data and data['head_commit']:
+                             commit_msg = data['head_commit'].get('message', 'N/A')
+                        # If meaningful 'inputs' are in the event (workflow_dispatch)
+                        if 'inputs' in data and 'message' in data['inputs']:
+                             commit_msg = data['inputs']['message']
+                except:
+                    commit_msg = "Unknown (Error parsing event)"
+            else:
+                commit_msg = "N/A"
+
+        # --- Construct Subject & Body ---
+        if status == 'success':
+            icon = "✅"
+            title = f"{stage} Successful"
+            color_text = "Step completed successfully!"
+        else:
+            icon = "❌"
+            title = f"{stage} Failed"
+            color_text = "Critical failure detected."
+
+        subject = f"{icon} {title}: {repo} ({env})"
+
+        body = f"""
+        {title}
+        ----------------------------------------
+        Environment: {env}
+        Status:      {color_text}
+        User:        {actor}
+        Trigger:     {event_name}
+        Message:     {commit_msg}
+
+        🔍 View Logs: https://github.com/{repo}/actions/runs/{run_id}
+        """
+
+        # --- Send Email ---
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = f"GitHub Actions <{sender}>"
+        msg['To'] = sender
+
+        try:
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(sender, password)
+                server.send_message(msg)
+            print(f"Email notification for '{status}' sent successfully!")
+        except Exception as e:
+            print(f"Failed to send email: {e}")

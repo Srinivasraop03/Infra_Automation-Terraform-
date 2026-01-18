@@ -17,6 +17,11 @@ on:
         options:
           - dev
           - prod
+      message:
+        description: "Reason for deployment"
+        required: true
+        default: "Manual Run"
+        type: string
 
 jobs:
   setup:
@@ -33,45 +38,6 @@ jobs:
           else
              echo "tf_env=dev" >> $GITHUB_OUTPUT
           fi
-
-      - name: 📧 Notify Start (Secure Python)
-        shell: python
-        env:
-          MAIL_USER: ${{ secrets.MAIL_USERNAME }}
-          MAIL_PASS: ${{ secrets.MAIL_PASSWORD }}
-          REPO: ${{ github.repository }}
-          ACTOR: ${{ github.actor }}
-          ENV: ${{ steps.set-env.outputs.tf_env }}
-          SHA: ${{ github.sha }}
-        run: |
-          import smtplib, os
-          from email.mime.text import MIMEText
-
-          sender = os.environ['MAIL_USER']
-          password = os.environ['MAIL_PASS']
-          repo = os.environ['REPO']
-          env = os.environ['ENV']
-
-          subject = f"🚀 Deployment Started: {repo} ({env})"
-          body = f"""
-          Deployment process initiated.
-          User: {os.environ['ACTOR']}
-          Environment: {env}
-          Commit: https://github.com/{repo}/commit/{os.environ['SHA']}
-          """
-
-          msg = MIMEText(body)
-          msg['Subject'] = subject
-          msg['From'] = f"GitHub Actions <{sender}>"
-          msg['To'] = sender
-
-          try:
-              with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                  server.login(sender, password)
-                  server.send_message(msg)
-              print("Email sent successfully!")
-          except Exception as e:
-              print(f"Failed to send email: {e}")
 
   plan:
     needs: setup
@@ -140,42 +106,15 @@ jobs:
           name: tfplan-${{ env.TF_ENV }}
           path: infrastructure-live/tfplan
 
-      - name: 📧 Notify Execution Failure (Plan)
+      - name: 📧 Notify Plan Failure
         if: failure()
-        shell: python
-        env:
-          MAIL_USER: ${{ secrets.MAIL_USERNAME }}
-          MAIL_PASS: ${{ secrets.MAIL_PASSWORD }}
-          REPO: ${{ github.repository }}
-          ENV: ${{ env.TF_ENV }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          import smtplib, os
-          from email.mime.text import MIMEText
-
-          sender = os.environ['MAIL_USER']
-          password = os.environ['MAIL_PASS']
-          repo = os.environ['REPO']
-          env = os.environ['ENV']
-
-          subject = f"❌ Plan Failed: {repo} ({env})"
-          body = f"""
-          Terraform Plan failed for environment: {env}
-          Check logs: https://github.com/{repo}/actions/runs/{os.environ['RUN_ID']}
-          """
-
-          msg = MIMEText(body)
-          msg['Subject'] = subject
-          msg['From'] = f"GitHub Actions <{sender}>"
-          msg['To'] = sender
-
-          try:
-              with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                  server.login(sender, password)
-                  server.send_message(msg)
-              print("Email sent successfully!")
-          except Exception as e:
-              print(f"Failed to send email: {e}")
+        uses: ./.github/actions/notify
+        with:
+          status: failure
+          stage: Plan
+          env: ${{ env.TF_ENV }}
+          mail_user: ${{ secrets.MAIL_USERNAME }}
+          mail_pass: ${{ secrets.MAIL_PASSWORD }}
 
   apply:
     needs: [setup, plan]
@@ -226,75 +165,20 @@ jobs:
 
       - name: 📧 Notify Success
         if: success()
-        shell: python
-        env:
-          MAIL_USER: ${{ secrets.MAIL_USERNAME }}
-          MAIL_PASS: ${{ secrets.MAIL_PASSWORD }}
-          REPO: ${{ github.repository }}
-          ENV: ${{ env.TF_ENV }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          import smtplib, os
-          from email.mime.text import MIMEText
+        uses: ./.github/actions/notify
+        with:
+          status: success
+          stage: Apply
+          env: ${{ env.TF_ENV }}
+          mail_user: ${{ secrets.MAIL_USERNAME }}
+          mail_pass: ${{ secrets.MAIL_PASSWORD }}
 
-          sender = os.environ['MAIL_USER']
-          password = os.environ['MAIL_PASS']
-          repo = os.environ['REPO']
-          env = os.environ['ENV']
-
-          subject = f"✅ Deployment Successful: {repo} ({env})"
-          body = f"""
-          Deployment completed successfully!
-          Environment: {env}
-          View run: https://github.com/{repo}/actions/runs/{os.environ['RUN_ID']}
-          """
-
-          msg = MIMEText(body)
-          msg['Subject'] = subject
-          msg['From'] = f"GitHub Actions <{sender}>"
-          msg['To'] = sender
-
-          try:
-              with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                  server.login(sender, password)
-                  server.send_message(msg)
-              print("Email sent successfully!")
-          except Exception as e:
-              print(f"Failed to send email: {e}")
-
-      - name: 📧 Notify Failure (Apply)
+      - name: 📧 Notify Failure
         if: failure()
-        shell: python
-        env:
-          MAIL_USER: ${{ secrets.MAIL_USERNAME }}
-          MAIL_PASS: ${{ secrets.MAIL_PASSWORD }}
-          REPO: ${{ github.repository }}
-          ENV: ${{ env.TF_ENV }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          import smtplib, os
-          from email.mime.text import MIMEText
-
-          sender = os.environ['MAIL_USER']
-          password = os.environ['MAIL_PASS']
-          repo = os.environ['REPO']
-          env = os.environ['ENV']
-
-          subject = f"❌ Deployment Failed: {repo} ({env})"
-          body = f"""
-          Terraform Apply failed for environment: {env}
-          Check logs: https://github.com/{repo}/actions/runs/{os.environ['RUN_ID']}
-          """
-
-          msg = MIMEText(body)
-          msg['Subject'] = subject
-          msg['From'] = f"GitHub Actions <{sender}>"
-          msg['To'] = sender
-
-          try:
-              with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                  server.login(sender, password)
-                  server.send_message(msg)
-              print("Email sent successfully!")
-          except Exception as e:
-              print(f"Failed to send email: {e}")
+        uses: ./.github/actions/notify
+        with:
+          status: failure
+          stage: Apply
+          env: ${{ env.TF_ENV }}
+          mail_user: ${{ secrets.MAIL_USERNAME }}
+          mail_pass: ${{ secrets.MAIL_PASSWORD }}
