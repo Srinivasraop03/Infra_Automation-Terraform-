@@ -2,6 +2,9 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Fetch Current Account ID for KMS Policy
+data "aws_caller_identity" "current" {}
+
 # ------------------------------------------------------------------------------
 # 1. NETWORKING (VPC)
 # ------------------------------------------------------------------------------
@@ -67,6 +70,37 @@ resource "aws_kms_key" "eks" {
   description             = "EKS Secret Encryption Key"
   deletion_window_in_days = 7
   enable_key_rotation     = true
+
+  # KMS Policy to allow EKS Service Access (Fixes 'IMPAIRED' cluster issue)
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow EKS Service"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 module "eks" {
