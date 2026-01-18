@@ -89,18 +89,22 @@ jobs:
                   echo "🚀 Running Terraform Apply..."
                   terraform apply -auto-approve
 
+                  # Capture Outputs securely to GITHUB_OUTPUT
+                  # This prevents shell echo pollution
+                  ARN=$(terraform output -raw github_actions_role_arn)
+                  BUCKET=$(terraform output -raw s3_bucket_name)
+
+                  echo "arn=$ARN" >> $GITHUB_OUTPUT
+                  echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+
+            - name: Display Results
+              if: ${{ inputs.action == 'apply' || inputs.action == '' }}
+              run: |
                   echo "--------------------------------------------------------"
                   echo "⬇️  BOOTSTRAP RESULTS  ⬇️"
                   echo "--------------------------------------------------------"
-
-                  # Dump outputs cleanly (Silence command echo to prevent annotation leakage)
-                  set +x
-                  ARN=$(terraform output -raw github_actions_role_arn)
-                  BUCKET=$(terraform output -raw s3_bucket_name)
-                  set -x
-
-                  echo "::notice title=OIDC Role ARN (For Secrets)::${ARN}"
-                  echo "::notice title=S3 Bucket::${BUCKET}"
+                  echo "::notice title=OIDC Role ARN::${{ steps.apply.outputs.arn }}"
+                  echo "::notice title=S3 Bucket::${{ steps.apply.outputs.bucket }}"
 
             - name: Empty S3 Bucket (Before Destroy)
               if: ${{ inputs.action == 'destroy' }}
