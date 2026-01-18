@@ -58,13 +58,11 @@ jobs:
                   fi
 
                   # 2. Import OIDC Provider if exists
-                  # Construct ARN: arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com
                   ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
                   PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
 
                   if aws iam get-open-id-connect-provider --open-id-connect-provider-arn $PROVIDER_ARN 2>/dev/null; then
                      echo "✅ OIDC Provider found. Importing..."
-                     # Note: Terraform resource name is aws_iam_openid_connect_provider.github
                      terraform import aws_iam_openid_connect_provider.github $PROVIDER_ARN || echo "Import skipped/failed"
                   else
                      echo "OIDC Provider not found. Will be created."
@@ -91,9 +89,16 @@ jobs:
                   echo "🚀 Running Terraform Apply..."
                   terraform apply -auto-approve
 
-                  # Output ARN
+                  echo "--------------------------------------------------------"
+                  echo "⬇️  BOOTSTRAP RESULTS  ⬇️"
+                  echo "--------------------------------------------------------"
+
+                  # Print Output cleanly
+                  terraform output
+
                   ARN=$(terraform output -raw github_actions_role_arn)
-                  echo "::notice title=OIDC Role ARN::${ARN}"
+                  echo "::notice title=OIDC Role ARN (For Secrets)::${ARN}"
+                  echo "::notice title=S3 Bucket::$(terraform output -raw s3_bucket_name)"
 
             - name: Empty S3 Bucket (Before Destroy)
               if: ${{ inputs.action == 'destroy' }}
