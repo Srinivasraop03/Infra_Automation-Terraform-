@@ -17,7 +17,7 @@ on:
 
 jobs:
     bootstrap:
-        name: "Bootstrap: ${{ inputs.action || 'apply' }}" # Default to apply on auto-trigger
+        name: "Bootstrap: ${{ inputs.action || 'apply' }}"
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -32,7 +32,6 @@ jobs:
               with:
                   terraform_version: 1.5.7
 
-            # We utilize Keys here because OIDC credentials (the Role) don't exist yet!
             - name: Configure AWS Credentials (Keys)
               uses: aws-actions/configure-aws-credentials@v4
               with:
@@ -43,50 +42,62 @@ jobs:
             - name: Terraform Init
               run: terraform init
 
-            - name: Check Existing State & Apply
+            - name: Robust Import & Apply
               if: ${{ inputs.action == 'apply' || inputs.action == '' }}
-              id: check
+              id: apply
               run: |
-                  ROLE_NAME="github-actions-oidc-role"
+                  echo "🔎 Checking for existing resources to import..."
 
-                  # Check if Role exists
+                  # 1. Import Role if exists
+                  ROLE_NAME="github-actions-oidc-role"
                   if aws iam get-role --role-name $ROLE_NAME 2>/dev/null; then
-                    echo "✅ Role '$ROLE_NAME' already exists. Skipping Terraform Apply."
-                    
-                    # Fetch ARN directly from AWS
-                    ARN=$(aws iam get-role --role-name $ROLE_NAME --query 'Role.Arn' --output text)
-                    
-                    echo "::notice title=OIDC Role ARN::${ARN}"
-                    echo "----------------------------------------------"
-                    echo "EXISTING ROLE ARN: ${ARN}"
-                    echo "----------------------------------------------"
-                    echo "Use this ARN in your 'AWS_ROLE_ARN' secret."
+                     echo "✅ Role '$ROLE_NAME' found. Importing..."
+                     terraform import aws_iam_role.github_actions $ROLE_NAME || echo "Import skipped/failed (already imported?)"
                   else
-                    echo "🚀 Role not found. Proceeding with Terraform..."
-                    terraform apply -auto-approve
+                     echo "Role not found. Will be created."
                   fi
+
+                  # 2. Import DynamoDB if exists
+                  TABLE_NAME="terraform-locks"
+                  if aws dynamodb describe-table --table-name $TABLE_NAME 2>/dev/null; then
+                     echo "✅ DynamoDB '$TABLE_NAME' found. Importing..."
+                     terraform import aws_dynamodb_table.terraform_locks $TABLE_NAME || echo "Import skipped/failed"
+                  else
+                     echo "DynamoDB not found. Will be created."
+                  fi
+
+                  # 3. Import S3 Bucket if exists
+                  # Note: We must match the name in main.tf variable
+                  BUCKET_NAME="terraform-infra-state-bucket-srini"
+                  if aws s3api head-bucket --bucket $BUCKET_NAME 2>/dev/null; then
+                     echo "✅ S3 Bucket '$BUCKET_NAME' found. Importing..."
+                     terraform import module.tf_state_bucket.aws_s3_bucket.this $BUCKET_NAME || echo "Import skipped/failed"
+                  else
+                     echo "S3 Bucket not found. Will be created."
+                  fi
+
+                  echo "🚀 Running Terraform Apply..."
+                  terraform apply -auto-approve
+
+                  # Output ARN
+                  ARN=$(terraform output -raw github_actions_role_arn)
+                  echo "::notice title=OIDC Role ARN::${ARN}"
 
             - name: Empty S3 Bucket (Before Destroy)
               if: ${{ inputs.action == 'destroy' }}
               run: |
-                  # 1. Get Bucket Name
                   BUCKET_NAME=$(terraform output -raw s3_bucket_name)
                   echo "Emptying bucket: $BUCKET_NAME"
 
-                  # 2. Delete all Object Versions
-                  echo "Deleting Object Versions..."
                   aws s3api list-object-versions --bucket $BUCKET_NAME --output json --query 'Versions[].{Key:Key,VersionId:VersionId}' > versions.json
                   if [ -s versions.json ] && [ "$(cat versions.json)" != "null" ]; then
                     aws s3api delete-objects --bucket $BUCKET_NAME --delete "{\"Objects\": $(cat versions.json)}"
                   fi
 
-                  # 3. Delete all Delete Markers
-                  echo "Deleting Delete Markers..."
                   aws s3api list-object-versions --bucket $BUCKET_NAME --output json --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' > markers.json
                   if [ -s markers.json ] && [ "$(cat markers.json)" != "null" ]; then
                     aws s3api delete-objects --bucket $BUCKET_NAME --delete "{\"Objects\": $(cat markers.json)}"
                   fi
-
                   echo "Bucket emptied!"
 
             - name: Terraform Destroy
