@@ -93,12 +93,11 @@ jobs:
                   echo "⬇️  BOOTSTRAP RESULTS  ⬇️"
                   echo "--------------------------------------------------------"
 
-                  # Dump outputs to JSON for clean parsing
-                  terraform output -json > outputs.json
-
-                  # Extract values cleanly using jq
-                  ARN=$(jq -r '.github_actions_role_arn.value // empty' outputs.json)
-                  BUCKET=$(jq -r '.s3_bucket_name.value // empty' outputs.json)
+                  # Dump outputs cleanly (Silence command echo to prevent annotation leakage)
+                  set +x
+                  ARN=$(terraform output -raw github_actions_role_arn)
+                  BUCKET=$(terraform output -raw s3_bucket_name)
+                  set -x
 
                   echo "::notice title=OIDC Role ARN (For Secrets)::${ARN}"
                   echo "::notice title=S3 Bucket::${BUCKET}"
