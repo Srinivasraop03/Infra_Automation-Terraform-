@@ -124,3 +124,25 @@ module "eks" {
     }
   }
 }
+
+# ------------------------------------------------------------------------------
+# 5. CONSOLE ACCESS (EKS)
+# ------------------------------------------------------------------------------
+
+# Grants the Root User access to the cluster (fixes the Blue Banner warning)
+resource "aws_eks_access_entry" "console_access" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+  type          = "STANDARD"
+}
+
+# Associates the "ClusterAdmin" policy with the Root User entry above
+resource "aws_eks_access_policy_association" "console_access_policy" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+}
