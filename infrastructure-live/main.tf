@@ -113,6 +113,9 @@ module "eks" {
 
   kms_key_arn = aws_kms_key.eks.arn
 
+  # Enable modern API authentication (required for Console Access Entry)
+  authentication_mode = "API_AND_CONFIG_MAP"
+
   # Passed as a map, matching variable "node_groups"
   node_groups = {
     general = {
